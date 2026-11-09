@@ -1,0 +1,238 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>מרכז בקרה להשקעות</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0d1219"><link rel="manifest" href="manifest.webmanifest"><style>
+/* Layout: five tabs in the order an investor works — act now, money, per-stock decision, opportunities, tax. Live vs snapshot and bank-confirmed vs planned are always labeled. */
+:root{--bg:#0d1219;--panel:#171f2b;--panel2:#1d2938;--text:#f0f4f9;--muted:#a0aec1;--border:#303e50;--green:#49c990;--red:#ff7784;--amber:#f2bb62;--blue:#8bb9ff;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px Arial,'Segoe UI',sans-serif;line-height:1.55}
+button,input,select{font:inherit}button{cursor:pointer}
+.shell{max-width:1480px;margin:auto;padding:26px 24px 65px}
+.head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.eyebrow{font-size:12px;color:var(--green);font-weight:bold;letter-spacing:1px}
+h1{font-size:30px;margin:3px 0 5px}h2{font-size:19px;margin:0 0 14px}
+.muted,.small{color:var(--muted)}.small{font-size:12px}
+.status{border:1px solid var(--border);padding:9px 13px;border-radius:10px;background:var(--panel);min-width:0}
+.status.live{border-color:#39745c}.status.err{border-color:#824450}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 15px;border-radius:9px}
+.btn.active{background:#244838;border-color:var(--green);color:#d4ffe8}.btn:hover{border-color:var(--blue)}
+.btn.primary{background:#244838;border-color:var(--green)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi,.panel,.alert{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:17px;min-width:0}
+.kpi .value{font-size:27px;font-weight:750;margin:6px 0}
+.mono{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate;display:inline-block}
+.kpi.red{border-color:#824450}.kpi.amber{border-color:#84623b}.kpi.green{border-color:#39745c}
+.banner{margin-top:14px;border:1px solid #84623b;background:#2a2216;border-radius:12px;padding:12px 16px;font-size:14px}
+.banner b{color:var(--amber)}
+.section{margin-top:28px}.sectionhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.alerts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.alert{border-right:4px solid var(--amber);display:flex;justify-content:space-between;gap:12px}
+.alert.urgent{border-right-color:var(--red)}.alert.info{border-right-color:var(--blue)}
+.alert .title{font-weight:bold;font-size:17px}.alert p{margin:4px 0;color:var(--muted);font-size:13px}
+.tag{display:inline-block;font-size:12px;border-radius:7px;padding:3px 8px;background:#304052;color:#d7e7f8;white-space:nowrap}
+.tag.red{background:#4a2934;color:#ffb2bc}.tag.green{background:#1e493b;color:#9de9bf}.tag.amber{background:#513e29;color:#ffd38d}.tag.blue{background:#22324d;color:#b9d3ff}
+.mini{border:1px solid var(--border);background:transparent;color:var(--text);padding:7px 10px;border-radius:8px;white-space:nowrap;align-self:flex-start}
+.split{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+.panel{overflow:hidden}.tablewrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:790px}
+th,td{padding:11px 9px;text-align:right;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+th{color:var(--muted);font-weight:normal}tr:last-child td{border-bottom:0}tr:hover td{background:#1c2938}
+.ticker{font-weight:750;font-size:15px}.risk{color:var(--red)}.good{color:var(--green)}.warn{color:var(--amber)}
+.filters{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.field{border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:var(--text);padding:9px;max-width:220px}
+.empty{padding:22px;color:var(--muted);text-align:center}
+.note{background:#202d3a;border-right:3px solid var(--blue);padding:12px 16px;border-radius:8px;margin-top:12px;font-size:13px}
+.bar{height:9px;background:#344151;border-radius:10px;overflow:hidden;display:flex}.bar span{height:100%;background:var(--green)}
+.foot{font-size:12px;color:var(--muted);margin-top:30px}.hidden{display:none!important}
+.snap{font-size:11px;color:var(--amber)}.liveP{font-size:11px;color:var(--green)}
+.msg{font-size:13px;margin-inline-start:6px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.split,.alerts{grid-template-columns:1fr}}
+@media(max-width:540px){.shell{padding:15px 16px 45px}.kpi{padding:12px}.kpi .value{font-size:20px}h1{font-size:24px}.alert{flex-direction:column}.field{max-width:100%}}
+.gate{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}.gatebox{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;width:min(380px,100%);display:flex;flex-direction:column;gap:12px}.gatebox .field{max-width:none;width:100%}.banner.up{border-color:#39745c;background:#15291f}.banner.up b{color:var(--green)}
+</style><style>
+/* Mobile: bottom tab bar + tables become labeled cards */
+@media(max-width:720px){
+.shell{padding:16px 16px calc(96px + env(safe-area-inset-bottom))}
+.head{display:block}.head .status{margin-top:12px}
+.toolbar{position:fixed;bottom:0;right:0;left:0;z-index:20;margin:0;padding:8px 4px calc(8px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;background:#101a27;border-top:1px solid #31445a;box-shadow:0 -8px 30px #0007}
+.toolbar .btn{border:0;background:transparent;color:#a7b8ca;font-size:10.5px;font-weight:700;line-height:1.2;min-height:54px;padding:6px 1px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:10px;white-space:normal;text-align:center}
+.toolbar .btn.active{background:#203e39;color:#73edb8}
+.toolbar .btn:before{font-size:19px;line-height:1}
+.toolbar .btn:nth-child(1):before{content:"⚠"}.toolbar .btn:nth-child(2):before{content:"₪"}.toolbar .btn:nth-child(3):before{content:"▤"}.toolbar .btn:nth-child(4):before{content:"◎"}.toolbar .btn:nth-child(5):before{content:"%"}.toolbar .btn:nth-child(6):before{content:"⚙"}
+.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.kpi .value{font-size:clamp(18px,5.2vw,24px);white-space:nowrap}
+.alerts{grid-template-columns:1fr}.alert{flex-direction:row;align-items:flex-start}.alert .mini{max-width:84px;white-space:normal;font-size:12px}
+.split{grid-template-columns:1fr}
+.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.filters .field{max-width:none;width:100%}.filters input#search{grid-column:1/-1}.filters label{font-size:12px;display:flex;flex-direction:column;gap:4px}
+.tablewrap{overflow:visible}.tablewrap table{min-width:0;display:block}.tablewrap thead{display:none}.tablewrap tbody{display:grid;gap:10px}
+.tablewrap tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;background:#182536;border:1px solid #2b4055;border-radius:13px;padding:13px 12px}
+.tablewrap td{display:block;border:0;padding:0;min-width:0;overflow-wrap:anywhere}
+.tablewrap td:first-child{grid-column:1/-1;border-bottom:1px solid #33485b;padding-bottom:7px}
+.tablewrap td:before{display:block;color:#90a6bc;font-size:10px;margin-bottom:2px}
+.tablewrap td:first-child:before{display:none}.tablewrap td .ticker,.tablewrap td.ticker{font-size:19px}.tablewrap tr:hover td{background:transparent}
+#risktbl td:nth-child(2):before{content:"שער"}#risktbl td:nth-child(3):before{content:"סטופ"}#risktbl td:nth-child(4):before{content:"מרחק"}#risktbl td:nth-child(5):before{content:"סיכון ₪"}
+#allhold td:nth-child(2):before{content:"כמות"}#allhold td:nth-child(3):before{content:"שער"}#allhold td:nth-child(4):before{content:"שווי ₪"}#allhold td:nth-child(5):before{content:"רווח"}#allhold td:nth-child(6):before{content:"סטופ מתוכנן / לימיט"}#allhold td:nth-child(7):before{content:"מרחק (ATR)"}#allhold td:nth-child(8):before{content:"מצב בבנק"}#allhold td:nth-child(9):before{content:"החלטה"}#allhold td:nth-child(9){grid-column:1/-1}
+#watch td:nth-child(2):before{content:"יציאה קודמת"}#watch td:nth-child(3):before{content:"שער"}#watch td:nth-child(4):before{content:"מאז היציאה"}#watch td:nth-child(5):before{content:"טריגר"}#watch td:nth-child(6):before{content:"מרחק"}#watch td:nth-child(7):before{content:"הסבר"}#watch td:nth-child(8):before{content:"מצב"}#watch td:nth-child(7){grid-column:1/-1}
+#sales td:nth-child(2):before{content:"תאריך"}#sales td:nth-child(3):before{content:"נייר"}#sales td:nth-child(4):before{content:"כמות"}#sales td:nth-child(5):before{content:"שער מכירה"}#sales td:nth-child(6):before{content:"עלות"}#sales td:nth-child(7):before{content:"רווח / הפסד"}#sales td:nth-child(8):before{content:"מס"}
+#sales tr:last-child td:first-child{grid-column:1/-1}
+}
+</style></head><body><div id="gate" class="gate"><form id="gateform" class="gatebox"><div class="eyebrow">PORTFOLIO CONTROL CENTER</div><h1>מרכז הבקרה</h1><p class="muted">הנתונים מוצפנים. הזן סיסמה.</p><input id="pw" class="field" type="password" autocomplete="current-password" placeholder="סיסמה" required><label class="small"><input type="checkbox" id="remember" checked> זכור במכשיר הזה</label><button class="btn primary" type="submit">פתח</button><div class="small" id="gatemsg" role="status"></div></form></div><main class="shell">
+<header class="head"><div><div class="eyebrow">PORTFOLIO CONTROL CENTER</div><h1>מרכז הבקרה להשקעות</h1><div class="muted">שני חשבונות · סטופים · הזדמנויות · מס — הדחוף קודם</div></div>
+<div class="status" id="statusbox"><b id="feedTitle">מחירים: צילום מצב</b><div class="small" id="feed">טוען…</div></div></header>
+<nav class="toolbar" role="tablist"><button class="btn active" data-tab="overview">1 · דורש טיפול</button><button class="btn" data-tab="money">2 · מצב הכסף</button><button class="btn" data-tab="holdings">3 · החלטה לכל מניה</button><button class="btn" data-tab="radar">4 · הזדמנויות</button><button class="btn" data-tab="tax">5 · מימושים ומס</button><button class="btn" data-tab="settings">הגדרות ועדכון</button></nav>
+<section class="kpis" id="kpis"></section>
+<div class="banner" id="mkt"><b>השוק בתיקון — אין כניסות חדשות.</b> כלל M של אוניל: מחכים ליום שמאשר מגמה עולה (עלייה חזקה במחזור גבוה כמה ימים אחרי השפל). סטופים: מתחת למבנה ולפחות 1.5 ATR מהמחיר.</div>
+
+<div id="overview" class="view"><section class="section"><div class="sectionhead"><h2>דורש טיפול עכשיו</h2><span class="small">לפי דחיפות · מכירות קודם, אחר כך פקודות בבנק, אחר כך קרבה לסטופ</span></div><div id="alerts" class="alerts"></div>
+<div class="note"><b>סדר ביום שני:</b> קודם מבטלים את פקודות הסטופ של המניות שנמכרות (הבנק נועל את הכמות), ואז מוכרים בלימיט ליד המחיר, לא לפני 16:45. רק אחר כך מעדכנים ומחדשים סטופים. "סמן שבוצע" הוא תיעוד אישי בדפדפן — הוא לא שולח פקודה לבנק.</div></section></div>
+
+<div id="money" class="view hidden"><section class="section split"><div class="panel"><h2>חשיפה לסיכון — כמה יאבד אם כל הסטופים יופעלו</h2><div class="tablewrap"><table><thead><tr><th>נייר / חשבון</th><th>שער</th><th>סטופ</th><th>מרחק</th><th>סיכון ₪</th></tr></thead><tbody id="risktbl"></tbody></table></div></div>
+<div class="panel"><h2>ריכוזיות — לידיעה בלבד</h2><div id="concentration"></div><div class="note">לפי הכלל שלך: לא מקטינים מניה טובה רק בגלל ריכוזיות — רק אם התזה נשברה או שנשברה תמיכה. ההון הידוע כולל מזומן שהוזן בהגדרות.</div></div></section></div>
+
+<div id="holdings" class="view hidden"><section class="section"><div class="sectionhead"><h2>החלטה לכל מניה</h2><div class="filters"><select id="account" class="field" aria-label="חשבון"><option value="all">כל החשבונות</option><option value="לאומי">לאומי</option><option value="פועלים">פועלים</option></select><select id="actfilter" class="field" aria-label="פעולה"><option value="all">כל הפעולות</option><option value="sell">למכור</option><option value="order">לטפל בפקודה</option><option value="hold">להחזיק</option></select><input id="search" class="field" placeholder="חיפוש מניה" aria-label="חיפוש"></div></div>
+<div class="panel tablewrap"><table><thead><tr><th>נייר / חשבון</th><th>כמות</th><th>שער</th><th>שווי ₪</th><th>רווח</th><th>סטופ מתוכנן / לימיט</th><th>מרחק (ATR)</th><th>מצב בבנק</th><th>החלטה</th></tr></thead><tbody id="allhold"></tbody></table></div>
+<div class="note">"מתוכנן" = הרמה לפי השיטה. "מצב בבנק" = מה שאומת מקבצי הבנק או מצילום מסך. סטופ מתוכנן לא נחשב פעיל עד שתאשר שהוזן. ESLT ו‑KTF בלי ATR — הסטופים שלהן לא מעוגנים.</div></section></div>
+
+<div id="radar" class="view hidden"><section class="section"><h2>מכ״ם הזדמנויות — לא פקודות קנייה</h2><div class="note">קנייה רק כשכל החמישה מתקיימים: בסיס תקין (עד ~33% עומק) · סגירה מעל נקודת הפריצה במחזור גבוה ב‑40% לפחות · עד 5% מעל הפריצה · אין דוח בשבועיים · השוק במגמה עולה מאושרת. בעסקה חדשה בודקים גם סטופ 7–8% וגם 1.5 ATR; אם 1.5 ATR רחב מ‑8% — מוותרים או מקטינים.</div>
+<div class="panel tablewrap" style="margin-top:12px"><table><thead><tr><th>נייר</th><th>יציאה קודמת</th><th>שער</th><th>מאז היציאה</th><th>טריגר</th><th>מרחק</th><th>הסבר</th><th>מצב</th></tr></thead><tbody id="watch"></tbody></table></div></section></div>
+
+<div id="tax" class="view hidden"><section class="section"><h2>מימושים והשפעת מס</h2><div class="note">לאומי: רווח/הפסד מקבצי הבנק (מאומת), מס 25% אומדן. פועלים: חשבון חברה, מס חברות 23% — חסר מחיר עלות, לכן לא מחושב. קיזוזים, הפרשי שער ועמלות דורשים בדיקה מול רו״ח.</div>
+<div class="panel tablewrap" style="margin-top:12px"><table><thead><tr><th>חשבון</th><th>תאריך</th><th>נייר</th><th>כמות</th><th>שער מכירה</th><th>עלות</th><th>רווח / הפסד ₪</th><th>מס (אומדן)</th></tr></thead><tbody id="sales"></tbody></table></div></section></div>
+
+<div id="settings" class="view hidden"><section class="section"><div class="panel"><h2>עדכון אוטומטי, יתרות ושער</h2>
+<p class="muted">המחירים, ה‑ATR, הממוצעים, ה‑RSI, תאריכי הדוחות ומצב השוק מתעדכנים לבד בשרת כל 10 דקות בשעות המסחר בארה״ב (Finnhub + Yahoo). הדף נטען מחדש כל 2 דקות. האחזקות והפקודות מתעדכנות כשאתה מעלה קבצי בנק ל‑Claude.</p>
+<div class="filters"><button class="btn primary" id="refresh" type="button">רענן עכשיו</button><button class="btn" id="auto" type="button" aria-pressed="false">רענון אוטומטי: כבוי</button><button class="btn" id="logout" type="button">שכח סיסמה במכשיר</button><span class="msg" id="msg"></span></div>
+<div class="filters" style="margin-top:12px"><label>מזומן לאומי ₪ <input class="field" type="number" id="cash1" min="0"></label><label>מזומן פועלים ₪ <input class="field" type="number" id="cash2" min="0" placeholder="לא ידוע"></label><label>שער דולר ₪ <input class="field" type="number" step="0.001" id="fx" min="0.1"></label><button class="btn" id="save" type="button">שמור (במכשיר הזה)</button><button class="btn" id="reset" type="button">אפס סימוני ביצוע</button></div>
+<div class="note">הנתונים מוצפנים (AES‑256). בלי הסיסמה הקובץ באתר הוא רצף תווים. השער מתעדכן אוטומטית אלא אם שמרת ערך ידני. KTF (ת״א) בלי מחיר חי.</div></div></section></div>
+<div class="foot">מתעדכן אוטומטית בשרת (GitHub Actions) כל 10 דקות בשעות המסחר בארה״ב · מחירים: Finnhub, היסטוריה ו‑ATR: Yahoo · אחזקות ופקודות לפי קבצי הבנק האחרונים · השיטה: אדוארדס ומגי + אוניל · לא מחובר לבנק ולא שולח פקודות · ניתוח, לא ייעוץ השקעות.</div>
+</main><script>
+// ord: ok = confirmed in bank at this level · upd = bank still at old level · exp = expired · none = no order. exit:true = decided to sell.
+let H=[],W=[],SALES=[],MKT="correction",D=null,T={},E={},PW=null;
+
+const $=x=>document.getElementById(x);
+const fmt=(n,d=0)=>n==null||isNaN(n)?"—":Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const money=n=>n==null?"—":(n<0?"‑₪":"₪")+fmt(Math.abs(n));
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function load(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function store(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
+let S={};try{S=JSON.parse(load("pc-settings")||"{}")}catch(e){}
+let done=new Set();try{done=new Set(JSON.parse(load("pc-done")||"[]"))}catch(e){}
+let fx=S.fx||3.118,cash1=S.cash1??423303,cash2=S.cash2??null;
+const Q={};let liveAt=null,timer=null;
+
+function px(h){const q=Q[h.tk];if(q&&h.tk==="ESLT")return{p:q.c*fx,pc:q.pc*fx,live:true};if(q&&!h.cur&&!h.nolive)return{p:q.c,pc:q.pc,live:true};return{p:h.px,pc:h.pc,live:false}}
+function val(h,p){return h.qty*p*(h.cur==="ILS"?1:fx)}
+function atrOf(h){if(h.cur==="ILS")return h.atr||null;const t=T[h.tk];return (t&&t.atr)||h.atr||null}
+function atrDist(h,p){const a=atrOf(h);return a?(p-h.stop)/a:null}
+function daysTo(d){if(!d)return null;return Math.round((new Date(d+"T00:00:00Z")-Date.now())/864e5)}
+function suggest(h,p){if(h.exit||h.cur==="ILS")return null;const t=T[h.tk],a=atrOf(h);if(!t||!a)return null;const d=(p-h.stop)/a;
+ if(d<1.5){const base=t.swingLow?Math.min(t.swingLow-0.5*a,p-1.5*a):p-1.5*a;return{kind:"down",lvl:Math.floor(base),why:`${fmt(d,1)} ATR — צפוף מדי (צריך 1.5+)`}}
+ if(t.sma50&&t.sma200&&p>t.sma50&&t.sma50>t.sma200){const tr=Math.floor(p-3*a);if(tr>h.stop)return{kind:"up",lvl:tr,why:"מגמה עולה — סטופ נגרר 3 ATR"}}
+ return null}
+function techLine(h,p){const t=T[h.tk];if(!t||h.cur==="ILS")return"";const e=E[h.tk],dd=daysTo(e),sg=suggest(h,p);
+ return `<div class="small">50/200: ${fmt(t.sma50,0)} / ${fmt(t.sma200,0)} · RSI ${fmt(t.rsi,0)} · ATR ${fmt(atrOf(h),1)}${e?` · דוח ${e.slice(8,10)}.${e.slice(5,7)}${dd!=null&&dd<=14?" ⚠":""}`:""}</div>${sg?`<div class="small ${sg.kind==="down"?"warn":"good"}">סטופ מוצע: $${sg.lvl} · ${sg.why}</div>`:""}`}
+const cs=h=>h.cur==="ILS"?"₪":"$";
+const ordTag={ok:["green","פעילה בבנק"],upd:["amber","בבנק ברמה ישנה"],exp:["red","פגה — לחדש"],none:["red","אין פקודה"]};
+function decision(h,p){
+ if(h.exit)return["red","למכור ביום שני"];
+ if(p<=h.stop)return["red","מתחת לסטופ — לוודא ביצוע"];
+ if(h.tp&&p>=h.tp)return["amber","הגיעה ליעד — לממש"];
+ const d=atrDist(h,p);if(d!=null&&d<1)return["amber","פחות מ‑1 ATR מהסטופ"];
+ if(h.ord!=="ok")return["blue","להחזיק · לטפל בפקודה"];
+ return["green","להחזיק"];
+}
+function wState(w,p){
+ if(w.type==="never")return["","לא חוזרים"];if(w.type==="park")return["green","לחנות מזומן"];
+ if(p==null)return["","אין מחיר חי"];
+ const hit=w.type==="above"?p>=w.lvl:p<=w.lvl, near=w.type==="above"?p>=w.lvl*0.97:p<=w.lvl*1.03;
+ if(hit){if(MKT==="correction")return["amber","בטריגר — אבל השוק בתיקון"];const t=T[w.tk]||{},dd=daysTo(E[w.tk]);
+  if(dd!=null&&dd>=0&&dd<=14)return["amber",`בטריגר — דוח בעוד ${dd} ימים`];
+  if(w.type==="above"&&p>w.lvl*1.05)return["amber","רחוק מ‑5% מעל הפריצה — לא רודפים"];
+  if(w.type==="above"&&!(t.volRatio>=1.4))return["blue",`בטריגר — מחזור ${fmt(t.volRatio,1)}× (צריך 1.4×)`];
+  return["green","מועמדת לקנייה — לבדוק בסיס"]}
+ if(near)return["blue","מתקרב לטריגר"];return["","מחכים"];
+}
+
+function render(){
+ let total=0,risk=0,todo=0;const rows=H.map(h=>{const r=px(h),v=val(h,r.p);total+=v;risk+=Math.max(0,r.p-h.stop)*h.qty*(h.cur==="ILS"?1:fx);if(h.exit||h.ord!=="ok")todo++;return{h,...r,v}});
+ const anyLive=rows.some(r=>r.live), cash=cash1+(cash2||0);
+ $("kpis").innerHTML=[
+  ["שווי אחזקות",money(total),anyLive?"מחירי ארה״ב חיים · ת״א צילום":"צילום מצב 06.11",""],
+  ["מזומן ידוע",money(cash),cash2==null?"חסר מזומן פועלים":"לפי ההגדרות",""],
+  ["פעולות פתוחות",todo,"מכירות + פקודות בבנק",todo?"red":""],
+  ["סיכון עד הסטופים",money(risk),fmt(risk/(total+cash)*100,1)+"% מההון הידוע","amber"]
+ ].map(k=>`<div class="kpi ${k[3]}"><div class="small">${k[0]}</div><div class="value mono">${k[1]}</div><div class="small">${k[2]}</div></div>`).join("");
+
+ // 1 · alerts
+ const A=[];rows.forEach(({h,p},i)=>{const c=cs(h);
+  if(h.exit)A.push({id:"sell-"+h.tk+h.acct,pr:0,cls:"urgent",tag:["red","מכירה"],h,txt:`${h.qty} יח׳ · ${c}${fmt(p,2)} · ${h.ord==="none"?"אין פקודת סטופ — אפשר למכור ישר":"קודם לבטל את פקודת הסטופ"} · ${h.note}`});
+  else if(p<=h.stop)A.push({id:"hit-"+i,pr:0,cls:"urgent",tag:["red","מתחת לסטופ"],h,txt:`${c}${fmt(p,2)} מול סטופ ${c}${h.stop} — לבדוק בבנק שבוצע`});
+  else{
+   if(h.ord==="exp")A.push({id:"exp-"+i,pr:1,cls:"urgent",tag:["red","פקודה שפגה"],h,txt:`לחדש עד 30.11: הפעלה ${c}${h.stop}${h.lim?" / לימיט "+h.lim:""}`});
+   if(h.ord==="none")A.push({id:"none-"+i,pr:1,cls:"",tag:["amber","אין פקודת סטופ"],h,txt:`להזין: הפעלה ${c}${h.stop}${h.lim?" / לימיט "+h.lim:""} · ${h.note}`});
+   if(h.ord==="upd")A.push({id:"upd-"+i,pr:2,cls:"info",tag:["blue","לעדכן רמה"],h,txt:`בבנק: ${h.old} ← חדש: ${c}${h.stop}${h.lim?" / "+h.lim:""} (${fmt(atrDist(h,p),1)} ATR)`});
+   const d=atrDist(h,p);if(d!=null&&d<1)A.push({id:"near-"+i,pr:2,cls:"",tag:["amber","קרוב לסטופ"],h,txt:`${fmt(d,1)} ATR מהסטופ — לבדוק לפני הפתיחה`});
+   const sg=suggest(h,p);if(sg&&sg.kind==="down"&&h.ord!=="upd")A.push({id:"rev-"+i+"-"+sg.lvl,pr:2,cls:"",tag:["amber","לבדוק סטופ"],h,txt:`${sg.why} · מוצע: $${sg.lvl}`});
+   if(sg&&sg.kind==="up")A.push({id:"trail-"+i+"-"+sg.lvl,pr:3,cls:"info",tag:["green","להעלות סטופ"],h,txt:`${sg.why} · מ‑$${h.stop} ל‑$${sg.lvl}`});
+   const dd=daysTo(E[h.tk]);if(dd!=null&&dd>=0&&dd<=14)A.push({id:"earn-"+h.tk+E[h.tk],pr:3,cls:"info",tag:["blue","דוח קרוב"],h,txt:`דוח ב‑${E[h.tk]} (בעוד ${dd} ימים) — לא מוסיפים; סטופ‑לימיט לא מגן מפער`});
+   if(h.tp&&p>=h.tp*0.97)A.push({id:"tp-"+i,pr:2,cls:"",tag:["amber","קרוב ליעד"],h,txt:`${c}${fmt(p,2)} מול יעד ${c}${h.tp} — להכין מימוש`});
+  }});
+ A.sort((a,b)=>a.pr-b.pr);
+ $("alerts").innerHTML=A.filter(a=>!done.has(a.id)).map(a=>`<div class="alert ${a.cls}"><div><span class="tag ${a.tag[0]}">${a.tag[1]}</span><div class="title">${esc(a.h.tk)} <span class="small">${esc(a.h.acct)}</span></div><p>${esc(a.txt)}</p></div><button class="mini" type="button" data-done="${a.id}">סמן שבוצע</button></div>`).join("")||'<div class="empty">אין פעולות פתוחות. ודא מול הבנק שהפקודות פעילות.</div>';
+
+ // 2 · money
+ $("risktbl").innerHTML=rows.filter(r=>!r.h.exit).sort((a,b)=>(b.p-b.h.stop)*b.h.qty*(b.h.cur?1:fx)-(a.p-a.h.stop)*a.h.qty*(a.h.cur?1:fx)).map(({h,p,live})=>{const r=Math.max(0,p-h.stop)*h.qty*(h.cur==="ILS"?1:fx);return`<tr><td><span class="ticker">${esc(h.tk)}</span><div class="small">${esc(h.acct)}</div></td><td><span class="mono">${cs(h)}${fmt(p,2)}</span><div class="${live?"liveP":"snap"}">${live?"חי":"צילום"}</div></td><td class="mono">${cs(h)}${h.stop}</td><td>${fmt((h.stop/p-1)*100,1)}%${h.atr?` · ${fmt(atrDist(h,p),1)} ATR`:""}</td><td class="mono risk">${money(r)}</td></tr>`}).join("");
+ const g={};rows.forEach(r=>g[r.h.tk]=(g[r.h.tk]||0)+r.v);
+ $("concentration").innerHTML=Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([tk,v])=>{const pc=v/(total+cash)*100;return`<div style="margin:14px 0"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(tk)}</b><span class="small">${money(v)} · ${fmt(pc,1)}%</span></div><div class="bar"><span style="width:${Math.min(100,pc*4)}%"></span></div></div>`}).join("");
+
+ // 3 · holdings
+ const acc=$("account").value,af=$("actfilter").value,q=$("search").value.trim().toLowerCase();
+ $("allhold").innerHTML=rows.filter(({h})=>(acc==="all"||h.acct===acc)&&h.tk.toLowerCase().includes(q)&&(af==="all"||(af==="sell"&&h.exit)||(af==="order"&&!h.exit&&h.ord!=="ok")||(af==="hold"&&!h.exit&&h.ord==="ok"))).sort((a,b)=>(b.h.exit?2:b.h.ord!=="ok"?1:0)-(a.h.exit?2:a.h.ord!=="ok"?1:0)).map(({h,p,pc,live,v})=>{const c=cs(h),pl=h.cost?(p/h.cost-1)*100:null,d=atrDist(h,p),[dc,dt]=decision(h,p),[oc,ot]=ordTag[h.ord];
+  return`<tr><td><span class="ticker">${esc(h.tk)}</span><div class="small">${esc(h.acct)}</div></td><td class="mono">${fmt(h.qty)}</td>
+  <td><span class="mono">${c}${fmt(p,2)}</span><div class="${live?"liveP":"snap"}">${live?"חי":"סגירה 06.11"} · ${pc?((p/pc-1)*100>=0?"+":"")+fmt((p/pc-1)*100,1)+"%":""}</div></td>
+  <td class="mono">${money(v)}</td><td class="${pl==null?"":pl>=0?"good":"risk"}">${pl==null?"—":(pl>=0?"+":"")+fmt(pl)+"%"}</td>
+  <td><span class="mono">${c}${h.stop}${h.lim?" / "+h.lim:""}</span>${h.tp?`<div class="small">יעד ${c}${h.tp}</div>`:""}</td>
+  <td class="${d!=null&&d<1.5?"warn":""}">${d==null?"לא מעוגן":fmt(d,1)+" ATR"}</td>
+  <td><span class="tag ${h.exit&&h.ord!=="none"?"amber":oc}">${h.exit&&h.ord!=="none"?"לבטל לפני מכירה":ot}</span>${h.old?`<div class="small">בבנק: ${esc(h.old)}</div>`:""}</td>
+  <td><span class="tag ${dc}">${dt}</span><div class="small">${esc(h.note)}</div>${techLine(h,p)}</td></tr>`}).join("")||'<tr><td colspan="9" class="empty">אין תוצאות</td></tr>';
+
+ // 4 · radar
+ $("watch").innerHTML=W.slice().sort((a,b)=>a.prio-b.prio).map(w=>{const p=Q[w.tk]?Q[w.tk].c:null,[sc,st]=wState(w,p),since=p&&w.exit?(p/w.exit-1)*100:null,dist=p&&w.lvl?(w.lvl/p-1)*100:null;
+  return`<tr><td class="ticker">${esc(w.tk)}</td><td>${w.exit?`<span class="mono">$${fmt(w.exit,2)}</span><div class="small">${w.date}</div>`:"—"}</td><td>${p?`<span class="mono">$${fmt(p,2)}</span><div class="liveP">חי</div>`:'<span class="small">צריך מחיר חי</span>'}</td>
+  <td class="${since==null?"":since<=0?"good":"warn"}">${since==null?"—":(since>=0?"+":"")+fmt(since,1)+"%"}</td>
+  <td class="mono">${w.lvl?(w.type==="below"?"≤ ":"≥ ")+"$"+fmt(w.lvl,w.lvl<100?1:0):"—"}</td><td>${dist==null?"—":(dist>=0?"+":"")+fmt(dist,1)+"%"}</td>
+  <td>${esc(w.why)}</td><td><span class="tag ${sc}">${st}</span></td></tr>`}).join("");
+
+ // 5 · tax
+ let net=0;$("sales").innerHTML=SALES.map(([a,d,tk,qn,p,c,pl])=>{if(pl!=null)net+=pl;return`<tr><td>${a}</td><td>${d}</td><td class="ticker">${tk}</td><td class="mono">${fmt(qn)}</td><td class="mono">$${fmt(p,2)}</td><td class="mono">${c?"$"+fmt(c,2):"—"}</td><td class="${pl==null?"warn":pl>=0?"good":"risk"}">${pl==null?"עלות חסרה":`<span class="mono">${money(pl)}</span> <span class="tag green">מאומת</span>`}</td><td>${pl==null?"לא ניתן לחשב":pl>=0?"מס "+money(pl*.25):"מגן מס "+money(-pl*.25)}</td></tr>`}).join("")+`<tr><td colspan="6"><b>לאומי נטו</b></td><td class="${net>=0?"good":"risk"}"><b class="mono">${money(net)}</b></td><td><b>מס ${money(net*.25)} · אחרי מס ${money(net*.75)}</b></td></tr>`;
+
+ $("cash1").value=cash1;$("cash2").value=cash2??"";$("fx").value=fx;
+ document.querySelectorAll("[data-done]").forEach(b=>b.onclick=()=>{done.add(b.dataset.done);store("pc-done",JSON.stringify([...done]));render()});
+ const box=$("statusbox");
+ if(D){const g=new Date(D.generated),age=(Date.now()-g)/6e4;box.className="status "+(age<30?"live":"");$("feedTitle").textContent=age<30?"מחירים: אוטומטי":"מחירים: עדכון אחרון";
+  $("feed").textContent="עודכן "+g.toLocaleString("he-IL",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+" · אחזקות: "+(D.portfolio.asof||"")+(D.errors&&D.errors.length?` · ${D.errors.length} שגיאות מקור`:"");}
+ const rb=D&&D.regimeBasis||{};$("mkt").className="banner"+(MKT==="uptrend"?" up":"");
+ $("mkt").innerHTML=MKT==="uptrend"?`<b>השוק במגמה עולה — מותר לחפש כניסות לפי חמשת התנאים.</b> QQQ ${fmt(rb.qqq,1)} מעל ממוצע 50 עולה (${fmt(rb.sma50,1)}). אומדן אוטומטי — לא תחליף לבדיקת יום המעקב.`:`<b>השוק בתיקון — אין כניסות חדשות.</b> כלל M של אוניל${rb.qqq?` · QQQ ${fmt(rb.qqq,1)} מול ממוצע 50 ${fmt(rb.sma50,1)}${rb.rising===false?" (יורד)":""}`:""}. סטופים: מתחת למבנה ולפחות 1.5 ATR מהמחיר.`;
+}
+
+async function decryptBlob(blob,pw){const te=new TextEncoder(),ub=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+ const base=await crypto.subtle.importKey("raw",te.encode(pw),"PBKDF2",false,["deriveKey"]);
+ const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:ub(blob.salt),iterations:blob.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
+ const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:ub(blob.iv)},key,ub(blob.ct));return JSON.parse(new TextDecoder().decode(pt))}
+async function loadData(pw){pw=pw||PW;const r=await fetch("data.enc.json?t="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);
+ const d=await decryptBlob(await r.json(),pw);PW=pw;D=d;const P=d.portfolio;H=P.holdings;W=P.watch;SALES=P.sales.map(x=>[x.acct,x.date,x.tk,x.qty,x.px,x.cost,x.pl]);
+ MKT=d.regime||"correction";T=d.tech||{};E=d.earnings||{};for(const k in Q)delete Q[k];Object.assign(Q,d.quotes||{});
+ if(!S.fx)fx=P.fx||fx;if(S.cash1==null)cash1=P.cash.leumi??cash1;if(S.cash2==null)cash2=P.cash.poalim??cash2;render();return d}
+async function refresh(){$("msg").textContent="מרענן…";try{await loadData();$("msg").textContent="עודכן"}catch(e){$("msg").textContent="שגיאה: "+e.message}}
+$("gateform").onsubmit=async ev=>{ev.preventDefault();const pw=$("pw").value;$("gatemsg").textContent="פותח…";
+ try{await loadData(pw);if($("remember").checked)store("pc-pw",pw);$("gate").classList.add("hidden");$("gatemsg").textContent=""}catch(e){$("gatemsg").textContent=e.name==="OperationError"?"סיסמה שגויה":"לא נטען: "+e.message}};
+$("logout").onclick=()=>{store("pc-pw",null);location.reload()};
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==b.dataset.tab));store("pc-tab",b.dataset.tab)});
+["account","actfilter"].forEach(id=>$(id).addEventListener("change",render));$("search").addEventListener("input",render);
+$("save").onclick=()=>{const a=Number($("cash1").value),b=$("cash2").value.trim(),f=Number($("fx").value);if(a<0||f<=0||(b!==""&&Number(b)<0)){$("msg").textContent="בדוק את הנתונים";return}cash1=a;cash2=b===""?null:Number(b);fx=f;store("pc-settings",JSON.stringify({cash1,cash2,fx}));$("msg").textContent="נשמר";render()};
+$("reset").onclick=()=>{done.clear();store("pc-done",null);render()};
+$("refresh").onclick=refresh;
+$("auto").onclick=()=>{const b=$("auto");if(timer){clearInterval(timer);timer=null;b.textContent="רענון אוטומטי: כבוי";b.setAttribute("aria-pressed","false")}else{refresh();timer=setInterval(refresh,120000);b.textContent="רענון אוטומטי: כל 2 דקות";b.setAttribute("aria-pressed","true")}};
+(function init(){const t=load("pc-tab");if(t&&$(t)){const b=document.querySelector(`[data-tab="${t}"]`);b&&b.click()}
+ const pw=load("pc-pw");if(pw){loadData(pw).then(()=>{$("gate").classList.add("hidden");timer=setInterval(refresh,120000);$("auto").textContent="רענון אוטומטי: כל 2 דקות";$("auto").setAttribute("aria-pressed","true")}).catch(()=>{store("pc-pw",null)})}})();
+</script><script>
+(function(){const mq=window.matchMedia("(max-width:720px)"),L={"1 · דורש טיפול": "דחוף", "2 · מצב הכסף": "כסף", "3 · החלטה לכל מניה": "מניות", "4 · הזדמנויות": "מכ״ם", "5 · מימושים ומס": "מס", "הגדרות ועדכון": "הגדרות"};const btns=[...document.querySelectorAll("[data-tab]")];btns.forEach(b=>b.dataset.full=b.textContent);
+function apply(){btns.forEach(b=>b.textContent=mq.matches?(L[b.dataset.full]||b.dataset.full):b.dataset.full)}apply();mq.addEventListener?mq.addEventListener("change",apply):mq.addListener(apply);
+btns.forEach(b=>b.addEventListener("click",()=>{if(mq.matches)window.scrollTo({top:0,behavior:"smooth"})}));})();
+</script></body></html>
