@@ -1,0 +1,4 @@
+data/portfolio.json
+*.local.json
+__pycache__/
+site/data.enc.json
